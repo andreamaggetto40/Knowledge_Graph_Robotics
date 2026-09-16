@@ -15,6 +15,17 @@ definition):
 ComplEx embeddings, query service) - fully tested, see `../../tests/` and
 `../../scripts/run_spatial_demo.py`.
 
+**Also verified, newly:** `spatialkg_to_graspkg_handoff.py`'s
+`~trigger_grasp:=true` path, which calls grasping_pipeline's `/robot_llm`
+action to actually execute a grasp. Confirmed by reading
+grasping_pipeline's own source (github.com/v4r-tuwien/grasping_pipeline -
+`src/statemachine_llm.py`, `launch/grasping_pipeline_statemachine.launch`),
+not guessed - see that script's docstring for exactly what was checked.
+Per your confirmation, grasping_pipeline is already running correctly on
+the real robot, so this is the one integration point in this whole repo
+that's verified *and* already working end to end, not just verified in
+isolation.
+
 **Still a guess:**
 - `podge_to_spatialkg_bridge.py`'s `_call_podge()` - identical guessed
   interface to `graspkg_ros/podge_bridge_node.py`'s, duplicated because the
@@ -27,6 +38,9 @@ ComplEx embeddings, query service) - fully tested, see `../../tests/` and
   GraspKG (SpatialKG tracks position, not orientation) - fine for grasp
   *type* selection, but may trip GraspKG's pose-consistency check for
   categories whose stable orientation isn't upright.
+- The `robot_llm` ROS package itself (defines `RobotLLMAction`) isn't in
+  either public grasping_pipeline repo - confirm `rospack find robot_llm`
+  resolves on your workspace before relying on `~trigger_grasp:=true`.
 
 ## Build
 
@@ -77,6 +91,19 @@ Try the secondary extension end to end (needs `bring_up_graspkg:=true run_graspk
 
 ```bash
 rosservice call /spatialkg_to_graspkg_handoff/find_and_grasp "query_class: 'Mug'"
+```
+
+To also actually execute the grasp (needs grasping_pipeline already
+running with `use_llm_state_machine:=true` - see `../../TESTING.md`
+Phase 8), add `trigger_grasp:=true` when launching:
+
+```bash
+roslaunch spatialkg_ros spatialkg.launch bring_up_graspkg:=true run_graspkg_handoff:=true \
+  trigger_grasp:=true grasp_task:=handover
+
+rosservice call /spatialkg_to_graspkg_handoff/find_and_grasp "query_class: 'Mug'"
+# now also returns grasp_executed=True, grasp_succeeded reflecting the
+# real outcome, and execution_message with grasping_pipeline's raw result
 ```
 
 ## Wiring into sasha_gpt

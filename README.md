@@ -49,13 +49,27 @@ PODGE live sightings (position only)              --->  knowledge acquisition (g
                                           -----------------------------------------
                                           |                                        |
                                           v                                        v
-                              sasha_gpt calls this instead        secondary extension: hand off to
-                              of guessing a location               GraspKG for grasp-type reasoning
-                                                                    -> haf_grasping -> grasping_pipeline
+                              sasha_gpt calls this instead        secondary extension: GraspKG decides
+                              of guessing a location               grasp type + checks pose consistency
+                                                                                |
+                                                                                v
+                                                        grasping_pipeline's '/robot_llm' action (VERIFIED,
+                                                        already running on the robot) - detection, pose
+                                                        estimation, haf_grasping-backed grasp-point search,
+                                                        MoveIt execution, placement/handover: all internal
                                                                                 |
                                                                                 v
                                                                   outcome updates the KG (LO8)
 ```
+
+`grasping_pipeline` (github.com/v4r-tuwien/grasping_pipeline) is the
+actual execution layer this project hands off to once an object has been
+located and its grasp type decided: it already wraps `haf_grasping` and
+MoveIt internally, and exposes an LLM-facing `/robot_llm` action
+(`use_llm_state_machine:=true`) that this repo's
+`spatialkg_to_graspkg_handoff.py` calls directly - see "Why this dataset/
+engine/embedding choice, specifically" below for what's verified vs. what
+you'd need to confirm on your own workspace.
 
 ## Why this dataset/engine/embedding choice, specifically
 
@@ -94,6 +108,22 @@ PODGE live sightings (position only)              --->  knowledge acquisition (g
   ("observation"/"embedding"/"none"), staleness, and a support chain, so
   "I don't know" and "this might be stale" are first-class answers, not
   failures. That's the whole point of the KG existing at all.
+- **grasping_pipeline for execution, not a hand-rolled MoveIt hand-off.**
+  Once GraspKG has decided a grasp type and confirmed pose consistency,
+  `spatialkg_to_graspkg_handoff.py` (with `~trigger_grasp:=true`) calls
+  grasping_pipeline's own `/robot_llm` actionlib server directly -
+  `robot_llm.msg.RobotLLMAction(task='handover'|'placement', object_name=...)`
+  - rather than reimplementing detection, pose estimation, grasp-point
+  search, and arm motion in this repo. This was verified by reading
+  grasping_pipeline's own source (`src/statemachine_llm.py`,
+  `launch/grasping_pipeline_statemachine.launch`), not guessed: it
+  confirmed grasping_pipeline already depends on and launches
+  `haf_grasping` internally, so the two projects don't duplicate that
+  integration - GraspKG's job is deciding *how* to grasp something and
+  recording whether it worked (LO8); grasping_pipeline's job is actually
+  doing it. `ros/graspkg_ros/scripts/haf_grasping_client.py` is kept only
+  as a reference for driving `haf_grasping` directly, bypassing
+  grasping_pipeline.
 
 ## Running the offline core (no ROS needed)
 
@@ -115,9 +145,11 @@ python3 scripts/evaluate_embeddings.py
 ## Running on the real robot
 
 See `ros/spatialkg_ros/README.md` (primary) and `ros/graspkg_ros/README.md`
-(secondary) for setup, the exact things still unverified against PODGE's
-real interface, and example `rosservice call` commands for trying each
-piece without the other running.
+(secondary) for setup and example `rosservice call` commands for trying
+each piece without the other running. PODGE's perception interface (two
+actionlib `robokudo_msgs/GenericImgProcAnnotatorAction` servers - object
+detector then pose estimator) is confirmed from `grasping_pipeline`'s own
+source, not guessed - see `TESTING.md` Phase 7 for the bring-up checklist.
 
 ## Learning-outcome mapping
 
@@ -130,7 +162,7 @@ piece without the other running.
 | LO6 Scalable Reasoning | `reasoning.run_rules` (fixpoint over recursive CONSTRUCT rules) |
 | LO7 KG Creation | `scene_loader.py` (heterogeneous sources: 3DSSG-format scenes + live PODGE sightings + corrections) |
 | LO8 KG Evolution | `spatialkg/evolution.py` (corrections), `reasoning.check_staleness` |
-| LO9 Real-World Applications | the whole thing, on a real HSR |
+| LO9 Real-World Applications | the whole thing, on a real HSR - SpatialKG's core is verified offline (tests/), PODGE's perception interface and grasp execution (via grasping_pipeline's real, already-running `/robot_llm` action) are both confirmed from source rather than guessed; sasha_gpt's own wiring into `locate_object` is the one remaining open unknown (see TESTING.md Phase 7) |
 | LO11 Services | `query_service.py` + the ROS service layer sasha_gpt queries |
 | LO12 Connections (AI/ML/DS) | perception (ML) -> KG (symbolic AI) -> evaluation scripts (DS-style metrics) |
 

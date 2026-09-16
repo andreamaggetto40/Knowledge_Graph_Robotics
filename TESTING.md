@@ -111,7 +111,7 @@ catkin_make --pkg graspkg_ros spatialkg_ros
 
 Likely failure modes and what they mean:
 - **`haf_grasping` not found** - `graspkg_ros` depends on it at build time (for its action/message types). It needs to already be built in the same workspace, which your `src/` listing suggests it is - if the build still can't find it, check it's actually been `catkin_make`'d at least once itself.
-- **`vision_msgs`/`object_detector_msgs` errors** - shouldn't happen; neither package's `package.xml` declares `object_detector_msgs` as a dependency yet, deliberately, since I haven't confirmed it's needed there (see Phase 7). If you see this, something's referencing it that shouldn't be yet.
+- **`robokudo_msgs` not found** - both packages now declare it as a build dependency (it defines `GenericImgProcAnnotatorAction`, PODGE's confirmed interface - see Phase 7). It's the same package `grasping_pipeline` itself depends on for its own `object_detector.py`/`pose_estimator.py`, so it should already be built in this workspace if `grasping_pipeline` is; if not, build it from `gitlab.informatik.uni-bremen.de/robokudo/robokudo_msgs` first.
 - **Python import errors when a node actually runs** (not at build time) - almost always means `pip install -e .` (Phase 1) wasn't done in the Python environment your ROS nodes actually run under. `roscore`/`rosrun` use whatever `python3` is on `PATH` at launch time, which may not be your venv - either activate the venv before `roslaunch`, or `pip install -e .` outside the venv too.
 
 ## Phase 6 - ROS smoke test, no PODGE, no robot
@@ -161,37 +161,114 @@ on is isolated to the two integration points below, not to this core.
 
 ## Phase 7 - real PODGE
 
-Confirm the real interface first (see `graspkg_ros/README.md`'s checklist
-- `rosservice list`/`type`, and `find ... -name "*.srv"` on
-`object_detector_msgs`), then fix `_call_podge()` in **both**
+This phase no longer has an open TODO either - PODGE's interface is
+confirmed (not guessed) directly from `grasping_pipeline`'s own source
+(`src/object_detector.py`, `src/pose_estimator.py`, both of which call the
+same PODGE this repo does): **two** actionlib
+`robokudo_msgs/GenericImgProcAnnotatorAction` servers, an object detector
+then a pose estimator, not one combined service. `_call_podge()` in both
 `graspkg_ros/scripts/podge_bridge_node.py` and
-`spatialkg_ros/scripts/podge_to_spatialkg_bridge.py` (they duplicate the
-same guessed function). Re-run the Phase 6 calls afterwards, but this time
-by triggering a real detection instead of calling the KG services by hand:
+`spatialkg_ros/scripts/podge_to_spatialkg_bridge.py` is written against
+this confirmed interface (see either file's docstring for the full detail,
+including the recommended `dataset: 'ycb_bop'` config value).
 
-```bash
-rosservice call /podge_bridge_node/detect_and_advise "object_name_filter: []"
-# or watch it happen automatically:
-rostopic echo /graspkg_node/grasp_advice
-```
+1. Bring up PODGE itself (in its own terminal, exactly the way you already
+   do it):
+   ```bash
+   xhost local:docker
+   DATASET=ycbv CONFIG=params_sasha.yaml docker compose -f docker_compose/gdrnpp_yolov8.yml up
+   ```
+   Watch for both the YOLOv8 and GDRNPP servers logging that they're ready.
+2. Confirm the action servers are actually up before wiring the KG side to
+   them:
+   ```bash
+   rostopic list | grep -E "object_detector|pose_estimator"
+   # expect /object_detector/yolov8/goal, /pose_estimator/gdrnet/goal, etc.
+   ```
+3. Confirm `grasping_pipeline/config/config.yaml` has `dataset: 'ycb_bop'`
+   set (it ships with `dataset: 'tracebotcanister'` by default) - that's
+   the only bundled dataset whose classes match GraspKG's 12 exactly.
+4. Re-run the Phase 6 calls, but this time by triggering a real detection
+   instead of calling the KG services by hand:
+   ```bash
+   rosservice call /podge_bridge_node/detect_and_advise "object_name_filter: []"
+   # or watch it happen automatically:
+   rostopic echo /graspkg_node/grasp_advice
+   ```
+   The one thing still worth checking empirically the first time you run
+   this: whether `detection.class_names` comes back as human-readable
+   names (e.g. `'025_mug'`) or generic `obj_NNNNNN` IDs -
+   `object_mapping.yaml` in `grasping_pipeline` has no `ycb_bop` section,
+   which suggests the former, but it's only confirmed once you print it.
+   If it's the latter, add a `ycb_bop` mapping table and translate in
+   `_call_podge()` before forwarding into `graspkg_node/add_detection`.
 
-## Phase 8 - haf_grasping
+## Phase 8 - grasping_pipeline (the real execution layer)
 
-Confirm `haf_grasping` itself is alive independent of my code first (its
-own example client, or `roslaunch haf_grasping haf_grasping_all.launch` +
-its rviz visualization), then run `haf_grasping_client.py` and check the
-black arrow in rviz matches the approach direction you'd expect for the
-grasp type being requested - that's the direct way to sanity-check the
-`TOP_DOWN_GRASP_TYPES` table's assumption without needing to read code.
+This phase no longer has an open TODO - grasping_pipeline's own
+`/robot_llm` action (confirmed from its source, see
+`spatialkg_to_graspkg_handoff.py`'s docstring) is what
+`spatialkg_to_graspkg_handoff.py` calls once `~trigger_grasp:=true`, and
+per your confirmation it's already working on the real robot.
+
+1. Bring up grasping_pipeline itself in LLM mode (separately from this
+   repo, in its own terminal/tmux pane - see grasping_pipeline's own
+   `startup.html` docs for the full bring-up sequence: object detector +
+   pose estimator servers, then):
+   ```bash
+   roslaunch grasping_pipeline grasping_pipeline_statemachine.launch use_llm_state_machine:=true
+   ```
+   Watch for `LLM Wrapper is ready` in its log.
+2. Confirm the action server is actually up before wiring the KG side to it:
+   ```bash
+   rostopic list | grep robot_llm
+   # expect /robot_llm/goal, /robot_llm/result, /robot_llm/status, etc.
+   ```
+3. Sanity-check it in isolation, independent of this repo entirely, with a
+   plain actionlib call (adjust the object name to something actually in
+   view of the robot's camera):
+   ```python
+   import rospy, actionlib
+   from robot_llm.msg import RobotLLMAction, RobotLLMGoal
+   rospy.init_node('robot_llm_smoketest')
+   client = actionlib.SimpleActionClient('/robot_llm', RobotLLMAction)
+   client.wait_for_server()
+   client.send_goal(RobotLLMGoal(task='handover', object_name='025_mug'))
+   client.wait_for_result()
+   print(client.get_result())
+   ```
+   Expect a `result` field containing a JSON string whose `status` key is
+   `'success'` or `'object_not_found'`. If `robot_llm.msg` fails to
+   import, `rospack find robot_llm` first - see the docstring's "STILL NOT
+   VERIFIED" note for why this package might not be where the rest of
+   grasping_pipeline is.
+
+Only once this phase passes on its own does the previous `haf_grasping_client.py`-based path (Phase 7's sibling, `graspkg_ros/haf_grasping_client.py`) become purely optional - it's kept only for driving `haf_grasping` directly, bypassing grasping_pipeline, e.g. to debug grasp-point search in isolation. Nothing in the main path depends on it anymore.
 
 ## Phase 9 - full loop
 
 PODGE sighting -> SpatialKG locates it -> (optionally) a correction ->
-hand-off to GraspKG -> `haf_grasping` -> your existing
-`grasping_pipeline`/`hsrb_moveit` -> outcome reported back. The last arrow
-in that chain is still an open `TODO` in `haf_grasping_client.py` until
-`grasping_pipeline_msgs`'s interface is confirmed - everything before it
-should already work by this point.
+hand-off to GraspKG (grasp type + consistency check) -> grasping_pipeline's
+`/robot_llm` action executes the pick/placement/handover end to end
+(detection, pose estimation, haf_grasping-backed grasp-point search when
+needed, MoveIt execution - all internal to grasping_pipeline) -> outcome
+reported back into GraspKG via `report_outcome`, updating its rolling
+success-rate stat (LO8). Try it through this repo's own service, with
+grasping_pipeline already running in LLM mode from Phase 8:
+
+```bash
+roslaunch spatialkg_ros spatialkg.launch bring_up_graspkg:=true run_graspkg_handoff:=true \
+  trigger_grasp:=true grasp_task:=handover
+
+rosservice call /spatialkg_to_graspkg_handoff/find_and_grasp "query_class: 'Mug'"
+# expect: found=True, grasp_type set, grasp_executed=True, grasp_succeeded
+# reflecting whatever actually happened on the robot, and a message
+# showing GraspKG's updated success rate for that (category, grasp_type)
+```
+
+The only remaining open unknown is sasha_gpt's own wiring into
+`locate_object` - PODGE's perception interface (Phase 7) and grasp
+*execution* (Phase 8) are no longer among them.
 
 ## Debugging tips
 
@@ -204,10 +281,11 @@ should already work by this point.
   pattern - store plain `Literal(value)` (no datatype) for anything you
   intend to filter on directly in a query, or use
   `FILTER(str(?x) = "...")` instead.
-- **Two open unknowns, not bugs:** if PODGE- or sasha_gpt-related pieces
-  don't work, that's expected until Phase 7/the sasha_gpt wiring is
-  confirmed - re-check Phase 6 still passes to confirm the core itself
-  isn't at fault.
+- **One open unknown, not a bug:** if sasha_gpt-related pieces don't work,
+  that's expected until its wiring into `locate_object` is confirmed -
+  re-check Phase 6 still passes to confirm the core itself isn't at fault.
+  PODGE (Phase 7) and grasp execution (Phase 8) are both confirmed, real
+  interfaces now, not guesses.
 - **Another gotcha already fixed, in case you add your own randomized
   training/sampling code:** always draw randomness from the seeded numpy
   generator (`self._rng`) inside a class that takes a `seed` parameter,

@@ -6,26 +6,40 @@ GraspKG live against PODGE and the Toyota HSR ("Sasha") in your
 
 ## What changed once real information came in
 
-An earlier version of this package assumed PODGE published a continuous
-`vision_msgs/Detection3DArray` topic. Your actual container logs show
-YOLOv8 and GDRNPP both run as **request/response services**
-("Server started, waiting for requests...", "Pose Estimation with GDRNPP
-is ready.") under what looks like a `/pose_estimator/...` namespace, using
-`object_detector_msgs` types. `podge_bridge_node.py` is now a **service
-client**, not a topic subscriber - but I still don't have the exact
-service name or field names, so that one function is a clearly marked,
-best-effort guess (see below).
+An earlier version of this package guessed PODGE published a continuous
+`vision_msgs/Detection3DArray` topic, then a later version guessed it was
+a single combined `object_detector_msgs/get_poses` service. Both were
+wrong. The real interface is now confirmed directly from
+`grasping_pipeline`'s own source (`src/object_detector.py`,
+`src/pose_estimator.py` - the same PODGE this package talks to, since
+`grasping_pipeline` calls it too): **two separate actionlib action
+servers**, both using `robokudo_msgs/GenericImgProcAnnotatorAction` (a
+generic image-processing annotator action type from the RoboKudo project,
+University of Bremen) - an object detector (YOLOv8, default topic
+`/object_detector/yolov8`) that takes `rgb`/`depth` and returns
+`class_names`/`class_confidences`/`bounding_boxes`, then a pose estimator
+(GDRNPP, default topic `/pose_estimator/gdrnet`) that takes those results
+plus `rgb`/`depth` again and returns `class_names`/`class_confidences`/
+`pose_results`. `podge_bridge_node.py`'s `_call_podge()` calls both in
+sequence - see the docstring at the top of that file for the full detail.
 
 Separately, your workspace already has a real grasp-execution stack:
 `haf_grasping` (public, from the same lab - David Fischinger with Markus
-Vincze, TU Wien), `grasping_pipeline` / `grasping_pipeline_msgs`, and
-`hsrb_moveit`. `haf_grasping_client.py` calls the *real*, verified
-`haf_grasping` action interface (fetched from
+Vincze, TU Wien), and `grasping_pipeline` / `grasping_pipeline_msgs` (also
+V4R/TU Wien). `haf_grasping_client.py` calls the *real*, verified
+`haf_grasping` action interface directly (fetched from
 github.com/davidfischinger/haf_grasping) - GraspKG's job is to bias its
 point-cloud grasp search with a semantic approach vector, not to reinvent
-arm motion. `grasping_pipeline` / `hsrb_moveit` still own the actual pick
-execution; I don't have `grasping_pipeline_msgs`'s contents yet, so that
-final hand-off is a marked `TODO` rather than a guess.
+arm motion. But `grasping_pipeline` already wraps `haf_grasping`
+internally (its `grasping_pipeline_servers.launch` includes
+`haf_grasping/launch/haf_grasping_all.launch`), and it's `grasping_pipeline`'s
+own `/robot_llm` actionlib action - not a hand-rolled MoveIt call - that
+now owns the actual pick/place/handover execution end to end. See
+`spatialkg_ros/scripts/spatialkg_to_graspkg_handoff.py`'s docstring for
+that hand-off, which is confirmed rather than a guess or a `TODO` now.
+`haf_grasping_client.py` in this package is kept only as an optional,
+independent way to drive `haf_grasping` directly (e.g. for debugging
+grasp-point search in isolation) - nothing in the main path depends on it.
 
 ## 1. What's verified vs. what's still a guess
 
@@ -35,36 +49,41 @@ final hand-off is a marked `TODO` rather than a guess.
   `calc_grasppoints_svm_action_server`) and its `GraspInput`/`GraspOutput`
   messages, fetched directly from the public repo - `haf_grasping_client.py`
   is built against these exactly, field for field.
+- `podge_bridge_node.py`'s `_call_podge()`: the two-actionlib-server
+  `robokudo_msgs/GenericImgProcAnnotatorAction` interface described above,
+  confirmed from `grasping_pipeline`'s own source rather than from
+  `rosservice`/`rostopic` introspection. Default topics
+  (`/object_detector/yolov8`, `/pose_estimator/gdrnet`) match
+  `grasping_pipeline/config/config.yaml`'s own defaults, and are
+  overridable via `~object_detector_topic`/`~pose_estimator_topic` params
+  (or the matching `graspkg.launch` args) if yours differ.
+- The hand-off from GraspKG's advice to actual execution: `grasping_pipeline`'s
+  `/robot_llm` action (`task='handover'|'placement'|'detection'`,
+  `object_name=<class>`), triggered from
+  `spatialkg_to_graspkg_handoff.py` when `~trigger_grasp:=true`, with the
+  result fed back into `graspkg_node/report_outcome`.
 
-**Still a guess - check before relying on it:**
-- `podge_bridge_node.py`'s `_call_podge()`: the service name
-  (`/pose_estimator/get_poses`, param `~podge_service`) and the
-  `object_detector_msgs` request/response shape (`get_poses` /
-  `get_posesRequest`, fields `.name` / `.confidence` / `.pose` on each
-  result). Confirm with:
-
-  ```bash
-  rosservice list | grep -iE "pose_estimator|yolo|gdrn"
-  rosservice type <the name that shows up>
-  find ~/HSR/catkin_ws/src/object_detector_msgs -name "*.srv" -o -name "*.msg" \
-      | xargs -I{} sh -c 'echo === {} ===; cat {}'
-  ```
-
-  Only `_call_podge()` needs to change once you know the real answer -
-  everything else in that file (forwarding into `graspkg_node`, the
-  `~detect_and_advise` service shape) is independent of it.
+**Still worth confirming empirically (not wrong, just unverified from
+source alone):**
+- Whether PODGE's `class_names` come back as human-readable names (e.g.
+  `'025_mug'`) or generic `obj_NNNNNN` IDs when running with
+  `dataset: 'ycb_bop'` - `grasping_pipeline/config/object_mapping.yaml`
+  has mapping sections for `ycb_ichores` and `hope` but none for
+  `ycb_bop`, which suggests the former, but print
+  `detection_result.class_names` once running to be sure. If it's IDs,
+  add a `ycb_bop` mapping table and translate in `_call_podge()`.
 - `haf_grasping_client.py`'s point-cloud topic (`~cloud_topic`, guessed as
   the HSR's raw registered points - `table_plane_extractor`, already in
   your workspace, may already publish a better-segmented object cloud;
   point `~cloud_topic` at that instead if so) and the per-category
   approach-vector table (`TOP_DOWN_GRASP_TYPES` - haf_grasping's own rviz
   visualization, the black arrow, shows you the direction it actually
-  used, so this is easy to eyeball and correct).
-- The final hand-off from a `haf_grasping` result to `grasping_pipeline`/
-  `hsrb_moveit` and back into `graspkg_node/report_outcome` - marked
-  `TODO` at the bottom of `haf_grasping_client.py`. Tell me how
-  `grasping_pipeline` wants to be called (service? actionlib? - check
-  `grasping_pipeline_msgs`) and I'll wire it up for real.
+  used, so this is easy to eyeball and correct). This path is now optional
+  (see above), so this only matters if you use it directly.
+- The `robot_llm` ROS package itself (which defines `RobotLLMAction`) -
+  it's not in `grasping_pipeline`'s own public dependency list, so confirm
+  `rospack find robot_llm` resolves on your workspace before relying on
+  the `~trigger_grasp:=true` path.
 
 ## 2. Build
 
@@ -92,13 +111,23 @@ package at build time.
 # core KG node + PODGE bridge:
 roslaunch graspkg_ros graspkg.launch
 
-# also start the haf_grasping client (only once haf_grasping itself and a
-# depth stream are running):
+# also start the haf_grasping client (optional - only needed if you want
+# to drive haf_grasping directly, bypassing grasping_pipeline; only once
+# haf_grasping itself and a depth stream are running):
 roslaunch graspkg_ros graspkg.launch run_haf_grasping_client:=true
 
-# override the guessed PODGE service / topics if needed:
-roslaunch graspkg_ros graspkg.launch podge_service:=/your/real/service
+# override the PODGE topics if yours differ from grasping_pipeline's own
+# config.yaml defaults:
+roslaunch graspkg_ros graspkg.launch \
+  object_detector_topic:=/object_detector/yolov8 \
+  pose_estimator_topic:=/pose_estimator/gdrnet
 ```
+
+This assumes PODGE is already up (`xhost local:docker && DATASET=ycbv
+CONFIG=params_sasha.yaml docker compose -f docker_compose/gdrnpp_yolov8.yml
+up`, in your usual PODGE checkout) and `grasping_pipeline`'s
+`config/config.yaml` has `dataset: 'ycb_bop'` set - see `TESTING.md`'s
+Phase 7 for the full checklist.
 
 ## 4. Try the KG side without PODGE or haf_grasping running
 
@@ -125,7 +154,8 @@ rosservice call /graspkg_node/report_outcome \
    succeeded: true"
 ```
 
-Once PODGE's real service is confirmed, the equivalent one-shot call is:
+With PODGE actually running, the equivalent one-shot call triggering a
+real detection is:
 
 ```bash
 rosservice call /podge_bridge_node/detect_and_advise "object_name_filter: []"

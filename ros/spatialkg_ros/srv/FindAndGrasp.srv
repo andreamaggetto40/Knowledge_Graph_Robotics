@@ -6,4 +6,7 @@ string room
 bool is_stale
 string grasp_type
 bool consistency_ok
+bool grasp_executed      # true once this call actually triggered grasping_pipeline
+bool grasp_succeeded     # only meaningful if grasp_executed is true
+string execution_message # grasping_pipeline's raw JSON result, for debugging
 string message

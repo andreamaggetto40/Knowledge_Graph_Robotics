@@ -9,12 +9,24 @@ This one IS verified against the real, public haf_grasping interface
 (github.com/davidfischinger/haf_grasping: action/CalcGraspPointsServer.action,
 msg/GraspInput.msg, msg/GraspOutput.msg) - not a guess.
 
-What this script does NOT do: move the arm. haf_grasping only returns
-candidate grasp points; turning that into a real pick belongs to your
-existing grasping_pipeline / hsrb_moveit stack. Once you tell me how
-grasping_pipeline wants to be called, the marked TODO at the bottom is
-where that hand-off (and the ReportGraspOutcome call back into GraspKG)
-goes.
+SUPERSEDED for the main path as of the grasping_pipeline integration:
+grasping_pipeline (github.com/v4r-tuwien/grasping_pipeline) already
+depends on and launches haf_grasping itself
+(launch/grasping_pipeline_servers.launch includes haf_grasping's own
+haf_grasping_all.launch) as one of its two pluggable grasp-point backends,
+and its FindGrasp state already does detection -> pose estimation ->
+grasp-point search -> MoveIt execution -> placement/handover end to end.
+`ros/spatialkg_ros/scripts/spatialkg_to_graspkg_handoff.py`'s
+~trigger_grasp:=true path now calls grasping_pipeline's own '/robot_llm'
+action directly instead of chaining through this node, which closes the
+"hand off to grasping_pipeline" TODO that used to live at the bottom of
+this file. What this script does NOT do, and never did: move the arm -
+haf_grasping only returns candidate grasp points.
+
+Kept as reference for the one case it's still useful: driving haf_grasping
+directly, bypassing grasping_pipeline's own state machine entirely (e.g.
+for debugging haf_grasping in isolation, or a future path that doesn't
+want grasping_pipeline's own detection/pose-estimation opinions).
 """
 import actionlib
 import rospy
@@ -111,14 +123,12 @@ class HAFGraspingClient:
             out.roll, out.eval,
         )
 
-        # TODO once grasping_pipeline_msgs is confirmed: hand `out` (the grasp
-        # point + roll + approach vector) to your existing grasping_pipeline /
-        # hsrb_moveit stack to actually execute the pick, then call
-        # graspkg_node/report_outcome with the real result:
-        #
-        #   from graspkg_ros.srv import ReportGraspOutcome
-        #   report = rospy.ServiceProxy("graspkg_node/report_outcome", ReportGraspOutcome)
-        #   report(instance_uri=advice.instance_uri, succeeded=<real pick result>)
+        # No further hand-off from here on the main path: grasping_pipeline
+        # calls haf_grasping itself when its config picks the direct-grasp
+        # backend, and drives MoveIt internally in execute_grasp_action_server.py.
+        # See ros/spatialkg_ros/scripts/spatialkg_to_graspkg_handoff.py for
+        # the actual execution + ReportGraspOutcome hand-off, now via
+        # grasping_pipeline's '/robot_llm' action instead of this node.
 
 
 if __name__ == "__main__":

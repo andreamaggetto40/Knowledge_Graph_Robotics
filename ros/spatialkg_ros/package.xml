@@ -19,6 +19,11 @@
   <build_depend>std_msgs</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>rospy</build_depend>
+  <build_depend>actionlib</build_depend>
+  <build_depend>actionlib_msgs</build_depend>
+  <!-- robokudo_msgs: confirmed PODGE interface, see
+       podge_to_spatialkg_bridge.py's docstring -->
+  <build_depend>robokudo_msgs</build_depend>
 
   <exec_depend>message_runtime</exec_depend>
   <exec_depend>rospy</exec_depend>
@@ -26,12 +31,23 @@
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>graspkg_ros</exec_depend>
-
-  <!-- object_detector_msgs: same story as graspkg_ros/package.xml - only
-       a real exec_depend once podge_to_spatialkg_bridge.py's guessed
-       import is confirmed. -->
+  <exec_depend>actionlib</exec_depend>
+  <exec_depend>actionlib_msgs</exec_depend>
+  <exec_depend>robokudo_msgs</exec_depend>
 
   <!-- rdflib / owlrl are not standard rosdep keys: pip install them
        (see ../../requirements.txt) into whatever Python environment this
        package's nodes run under. -->
+
+  <!-- spatialkg_to_graspkg_handoff.py's ~trigger_grasp:=true path calls
+       grasping_pipeline's own '/robot_llm' action (see that script's
+       docstring - verified from github.com/v4r-tuwien/grasping_pipeline
+       source). grasping_pipeline itself must already be on this
+       workspace's ROS_PACKAGE_PATH (it is, since it's already running on
+       this robot), and so must the 'robot_llm' message package that
+       defines RobotLLMAction - that one isn't in grasping_pipeline's own
+       public dependency list, so confirm `rospack find robot_llm`
+       resolves before relying on this path. Not added as a hard
+       <exec_depend> here because ~trigger_grasp defaults to false and the
+       node still runs (advisory-only) without either package present. -->
 </package>

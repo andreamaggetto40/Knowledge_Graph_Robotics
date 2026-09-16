@@ -1,14 +1,21 @@
 <launch>
-  <arg name="podge_service" default="/pose_estimator/get_poses"/>
+  <!-- match grasping_pipeline's own config/config.yaml so this bridge and
+       grasping_pipeline's internal FindGrasp state hit the same PODGE
+       endpoints - see podge_bridge_node.py's docstring -->
+  <arg name="object_detector_topic" default="/object_detector/yolov8"/>
+  <arg name="pose_estimator_topic" default="/pose_estimator/gdrnet"/>
   <arg name="color_topic" default="/hsrb/head_rgbd_sensor/rgb/image_rect_color"/>
+  <arg name="depth_topic" default="/hsrb/head_rgbd_sensor/depth_registered/image_rect_raw"/>
   <arg name="cloud_topic" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/>
   <arg name="run_haf_grasping_client" default="false"/>
 
   <node pkg="graspkg_ros" type="graspkg_node.py" name="graspkg_node" output="screen"/>
 
   <node pkg="graspkg_ros" type="podge_bridge_node.py" name="podge_bridge_node" output="screen">
-    <param name="podge_service" value="$(arg podge_service)"/>
+    <param name="object_detector_topic" value="$(arg object_detector_topic)"/>
+    <param name="pose_estimator_topic" value="$(arg pose_estimator_topic)"/>
     <param name="color_topic" value="$(arg color_topic)"/>
+    <param name="depth_topic" value="$(arg depth_topic)"/>
   </node>
 
   <!-- off by default: only start once haf_grasping itself is running -->

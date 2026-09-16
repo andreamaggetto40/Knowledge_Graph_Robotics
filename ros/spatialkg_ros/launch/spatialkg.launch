@@ -1,11 +1,18 @@
 <launch>
   <arg name="scene_file" default=""/>
   <arg name="room_id" default="Kitchen"/>
-  <arg name="podge_service" default="/pose_estimator/get_poses"/>
+  <arg name="object_detector_topic" default="/object_detector/yolov8"/>
+  <arg name="pose_estimator_topic" default="/pose_estimator/gdrnet"/>
   <arg name="color_topic" default="/hsrb/head_rgbd_sensor/rgb/image_rect_color"/>
+  <arg name="depth_topic" default="/hsrb/head_rgbd_sensor/depth_registered/image_rect_raw"/>
   <arg name="run_podge_bridge" default="false"/>
   <arg name="bring_up_graspkg" default="false"/>
   <arg name="run_graspkg_handoff" default="false"/>
+  <!-- only takes effect if run_graspkg_handoff is also true. Requires
+       grasping_pipeline running separately with
+       use_llm_state_machine:=true (see ros/spatialkg_ros/README.md) -->
+  <arg name="trigger_grasp" default="false"/>
+  <arg name="grasp_task" default="handover"/>
 
   <node pkg="spatialkg_ros" type="spatialkg_node.py" name="spatialkg_node" output="screen">
     <!-- only set the param when scene_file is actually overridden - an
@@ -14,13 +21,15 @@
     <param name="scene_file" value="$(arg scene_file)" unless="$(eval scene_file == '')"/>
   </node>
 
-  <!-- off by default: needs PODGE's real service confirmed first, see
-       graspkg_ros/README.md's checklist - podge_to_spatialkg_bridge.py
-       has the same guessed interface as podge_bridge_node.py -->
+  <!-- off by default: needs PODGE (docker_compose/gdrnpp_yolov8.yml) and
+       grasping_pipeline's servers already running - see
+       podge_to_spatialkg_bridge.py's docstring for the confirmed interface -->
   <node pkg="spatialkg_ros" type="podge_to_spatialkg_bridge.py" name="podge_to_spatialkg_bridge"
         output="screen" if="$(arg run_podge_bridge)">
-    <param name="podge_service" value="$(arg podge_service)"/>
+    <param name="object_detector_topic" value="$(arg object_detector_topic)"/>
+    <param name="pose_estimator_topic" value="$(arg pose_estimator_topic)"/>
     <param name="color_topic" value="$(arg color_topic)"/>
+    <param name="depth_topic" value="$(arg depth_topic)"/>
     <param name="room_id" value="$(arg room_id)"/>
   </node>
 
@@ -28,5 +37,8 @@
   <include file="$(find graspkg_ros)/launch/graspkg.launch" if="$(arg bring_up_graspkg)"/>
 
   <node pkg="spatialkg_ros" type="spatialkg_to_graspkg_handoff.py" name="spatialkg_to_graspkg_handoff"
-        output="screen" if="$(arg run_graspkg_handoff)"/>
+        output="screen" if="$(arg run_graspkg_handoff)">
+    <param name="trigger_grasp" value="$(arg trigger_grasp)"/>
+    <param name="grasp_task" value="$(arg grasp_task)"/>
+  </node>
 </launch>
