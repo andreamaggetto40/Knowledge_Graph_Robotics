@@ -1,0 +1,8 @@
+# Trigger PODGE (2D detection + 6D pose) once and feed every result straight
+# into GraspKG. No request fields - it's a one-shot "look now" trigger.
+# Optional class filter: leave empty to accept all 12 configured classes.
+string[] object_name_filter
+---
+bool success
+graspkg_ros/GraspAdvice[] advice
+string message

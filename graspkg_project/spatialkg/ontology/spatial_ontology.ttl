@@ -1,0 +1,77 @@
+@prefix sp:    <http://v4r.tuwien.ac.at/spatialkg#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+<http://v4r.tuwien.ac.at/spatialkg>
+    a owl:Ontology ;
+    rdfs:comment "SpatialKG: explainable spatial KG for the Toyota HSR, using the relation vocabulary of 3RScan/3DSSG (Wald et al.) as its schema reference." .
+
+#################################################################
+# Top-level classes
+#################################################################
+sp:SpatialEntity  a owl:Class ; rdfs:comment "Anything that has a position in the scene." .
+sp:Room           a owl:Class ; rdfs:subClassOf sp:SpatialEntity .
+sp:Furniture      a owl:Class ; rdfs:subClassOf sp:SpatialEntity .
+sp:PortableObject a owl:Class ; rdfs:subClassOf sp:SpatialEntity ; rdfs:comment "Objects PODGE can detect and the HSR can pick up." .
+sp:Observation    a owl:Class ; rdfs:comment "One timestamped sighting of an entity, from PODGE, a 3RScan-format scene load, or a correction." .
+
+#################################################################
+# The 12 PODGE/YCB-V classes, as PortableObjects
+# (same leaf classes as graspkg/ontology/grasp_ontology.ttl, kept in sync
+# manually - see spatialkg/reference_data.py)
+#################################################################
+sp:MasterChefCan  a owl:Class ; rdfs:subClassOf sp:PortableObject ; rdfs:label "002_master_chef_can" .
+sp:CrackerBox     a owl:Class ; rdfs:subClassOf sp:PortableObject ; rdfs:label "003_cracker_box" .
+sp:TomatoSoupCan  a owl:Class ; rdfs:subClassOf sp:PortableObject ; rdfs:label "005_tomato_soup_can" .
+sp:MustardBottle  a owl:Class ; rdfs:subClassOf sp:PortableObject ; rdfs:label "006_mustard_bottle" .
+sp:GelatinBox     a owl:Class ; rdfs:subClassOf sp:PortableObject ; rdfs:label "009_gelatin_box" .
+sp:PottedMeatCan  a owl:Class ; rdfs:subClassOf sp:PortableObject ; rdfs:label "010_potted_meat_can" .
+sp:Banana         a owl:Class ; rdfs:subClassOf sp:PortableObject ; rdfs:label "011_banana" .
+sp:BleachCleanser a owl:Class ; rdfs:subClassOf sp:PortableObject ; rdfs:label "021_bleach_cleanser" .
+sp:Bowl           a owl:Class ; rdfs:subClassOf sp:PortableObject ; rdfs:label "024_bowl" .
+sp:Mug            a owl:Class ; rdfs:subClassOf sp:PortableObject ; rdfs:label "025_mug" .
+sp:PowerDrill     a owl:Class ; rdfs:subClassOf sp:PortableObject ; rdfs:label "035_power_drill" .
+sp:FoamBrick      a owl:Class ; rdfs:subClassOf sp:PortableObject ; rdfs:label "061_foam_brick" .
+
+# A few common furniture classes, for the sample scene and 3DSSG loading -
+# extend freely once real 3RScan/3DSSG scans are available.
+sp:Table   a owl:Class ; rdfs:subClassOf sp:Furniture .
+sp:Cabinet a owl:Class ; rdfs:subClassOf sp:Furniture .
+sp:Shelf   a owl:Class ; rdfs:subClassOf sp:Furniture .
+sp:Counter a owl:Class ; rdfs:subClassOf sp:Furniture .
+
+#################################################################
+# Object properties - a deliberately small subset of 3DSSG's relationship
+# vocabulary (Wald et al. 2020 list ~20-27 predicates; these are the ones
+# load-bearing for "spatial hierarchies, containment and reachability"):
+#   support/containment: standing on, supported by, hanging on, inside,
+#     attached to  ->  sp:supportedBy, sp:insideOf, sp:hangingOn, sp:attachedTo
+#   structural:          part of                -> sp:partOf
+#   topological (ours):  located in a room       -> sp:locatedIn
+#   navigation (ours):   room adjacency          -> sp:adjacentRoom
+#   re-localization:     same physical object
+#     across scans/time  (3RScan's own purpose)  -> sp:sameInstanceAs
+#################################################################
+sp:supportedBy  a owl:ObjectProperty ; rdfs:domain sp:SpatialEntity ; rdfs:range sp:SpatialEntity .
+sp:insideOf     a owl:ObjectProperty ; rdfs:domain sp:SpatialEntity ; rdfs:range sp:SpatialEntity .
+sp:hangingOn    a owl:ObjectProperty ; rdfs:domain sp:SpatialEntity ; rdfs:range sp:SpatialEntity .
+sp:attachedTo   a owl:ObjectProperty ; rdfs:domain sp:SpatialEntity ; rdfs:range sp:SpatialEntity .
+sp:partOf       a owl:ObjectProperty ; rdfs:domain sp:SpatialEntity ; rdfs:range sp:SpatialEntity .
+sp:locatedIn    a owl:ObjectProperty ; rdfs:domain sp:SpatialEntity ; rdfs:range sp:Room .
+sp:adjacentRoom a owl:ObjectProperty ; rdfs:domain sp:Room ; rdfs:range sp:Room ; rdfs:comment "Symmetric in practice - assert both directions." .
+sp:sameInstanceAs a owl:ObjectProperty ; rdfs:comment "Links two Observations of what is believed to be the same physical object, possibly moved." .
+
+#################################################################
+# Datatype properties
+#################################################################
+sp:leafClass    a owl:DatatypeProperty ; rdfs:range xsd:string .
+sp:positionX a owl:DatatypeProperty ; rdfs:range xsd:float .
+sp:positionY a owl:DatatypeProperty ; rdfs:range xsd:float .
+sp:positionZ a owl:DatatypeProperty ; rdfs:range xsd:float .
+sp:observedAt   a owl:DatatypeProperty ; rdfs:range xsd:dateTime .
+sp:confidence   a owl:DatatypeProperty ; rdfs:range xsd:float .
+sp:sourceScan   a owl:DatatypeProperty ; rdfs:range xsd:string ; rdfs:comment "Which scan/session this observation came from - a 3DSSG scan id, or 'live:<timestamp>' for a PODGE detection." .
+sp:isStale      a owl:DatatypeProperty ; rdfs:range xsd:boolean ; rdfs:comment "Set by reasoning.py when an observation is older than the staleness threshold." .
+sp:correctedBy  a owl:DatatypeProperty ; rdfs:range xsd:string ; rdfs:comment "Set when a human/LLM correction overrides a stale or wrong fact - LO8 evolution." .

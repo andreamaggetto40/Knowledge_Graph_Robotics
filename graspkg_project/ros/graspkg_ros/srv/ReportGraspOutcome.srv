@@ -1,0 +1,6 @@
+string instance_uri
+bool succeeded
+---
+bool success
+float32 updated_success_rate
+string message

@@ -1,0 +1,10 @@
+string object_name     # e.g. "025_mug" - one of the 12 PODGE classes
+float32 confidence
+float32 position_x
+float32 position_y
+float32 position_z
+string room_id         # which sp:Room this sighting happened in
+---
+bool success
+string instance_uri
+string message

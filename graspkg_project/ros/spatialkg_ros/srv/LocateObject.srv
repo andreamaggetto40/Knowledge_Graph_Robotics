@@ -1,0 +1,19 @@
+# "Where is X" - the query an LLM interface (sasha_gpt) calls to ground or
+# verify an answer instead of hallucinating one. Always succeeds (success
+# is about the call itself); `found` tells you whether there was an actual
+# answer, and `source` explains how confident to be in it.
+string query_class     # e.g. "Mug"
+---
+bool success
+bool found
+string room
+string[] support_chain
+string observed_at
+bool is_stale
+string source           # "observation" | "embedding" | "none"
+float32 confidence      # -1.0 if unknown
+float32 position_x
+float32 position_y
+float32 position_z
+string history_note
+string explanation

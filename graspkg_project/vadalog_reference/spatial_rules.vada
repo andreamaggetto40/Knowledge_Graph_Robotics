@@ -1,0 +1,40 @@
+% SpatialKG's recursive rules, in Vadalog's own Datalog+/- syntax.
+%
+% UNTESTED: real Vadalog access is gated behind Prometheux Limited's
+% backend (see chat history) - this is a faithful hand-translation of the
+% SPARQL property-path rules in spatialkg/reasoning.py, included because
+% the one-pager specifically calls for "recursive rules for spatial
+% hierarchies and containment" using Vadalog, and expressing the same
+% logic in the course's own tool is worth having on record even without a
+% way to execute it here. If you get real engine access, this is the
+% starting point - the predicate names match reasoning.py's SPARQL
+% variable names one-for-one so cross-checking behaviour is easy.
+
+@input("supportedBy").
+@input("insideOf").
+@input("hangingOn").
+@input("attachedTo").
+@input("locatedIn").
+@input("adjacentRoom").
+
+% --- Recursive rule 1: containment/support propagates room membership
+% through arbitrarily long chains (book on tray on table on floor of
+% Kitchen -> book locatedIn Kitchen), matching reasoning.py's
+% "(supportedBy|insideOf|hangingOn|attachedTo)+" property path.
+@output("locatedInDerived").
+locatedInDerived(Obj, Room) :- supportedBy(Obj, Anchor), locatedIn(Anchor, Room).
+locatedInDerived(Obj, Room) :- insideOf(Obj, Anchor), locatedIn(Anchor, Room).
+locatedInDerived(Obj, Room) :- hangingOn(Obj, Anchor), locatedIn(Anchor, Room).
+locatedInDerived(Obj, Room) :- attachedTo(Obj, Anchor), locatedIn(Anchor, Room).
+locatedInDerived(Obj, Room) :- supportedBy(Obj, Anchor), locatedInDerived(Anchor, Room).
+locatedInDerived(Obj, Room) :- insideOf(Obj, Anchor), locatedInDerived(Anchor, Room).
+locatedInDerived(Obj, Room) :- hangingOn(Obj, Anchor), locatedInDerived(Anchor, Room).
+locatedInDerived(Obj, Room) :- attachedTo(Obj, Anchor), locatedInDerived(Anchor, Room).
+
+% --- Recursive rule 2: room-to-room reachability, transitive closure over
+% adjacency - matching reasoning.py's "adjacentRoom+" property path. This
+% is the textbook recursive Datalog rule (same-generation / transitive
+% closure pattern).
+@output("reachableFrom").
+reachableFrom(R1, R2) :- adjacentRoom(R1, R2).
+reachableFrom(R1, R2) :- adjacentRoom(R1, R3), reachableFrom(R3, R2).

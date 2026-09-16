@@ -1,0 +1,114 @@
+@prefix grasp: <http://v4r.tuwien.ac.at/graspkg#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+<http://v4r.tuwien.ac.at/graspkg>
+    a owl:Ontology ;
+    rdfs:comment "GraspKG: affordance-aware ontology for PODGE-detected YCB-V objects on the Toyota HSR." .
+
+#################################################################
+# Top-level classes
+#################################################################
+grasp:GraspableObject a owl:Class .
+grasp:GraspType       a owl:Class .
+grasp:Affordance      a owl:Class .
+grasp:DetectedObject  a owl:Class ; rdfs:comment "An instance created from one PODGE detection." .
+grasp:GraspAttempt    a owl:Class .
+grasp:GraspTypeStat   a owl:Class ; rdfs:comment "Rolling success/attempt counters for a (category, grasp type) pair." .
+
+#################################################################
+# Object categories - the background knowledge (K) that instances inherit
+#################################################################
+grasp:CylindricalGraspable a owl:Class ; rdfs:subClassOf grasp:GraspableObject .
+grasp:BoxGraspable         a owl:Class ; rdfs:subClassOf grasp:GraspableObject .
+grasp:HandleGraspable      a owl:Class ; rdfs:subClassOf grasp:GraspableObject .
+grasp:Container            a owl:Class ; rdfs:subClassOf grasp:GraspableObject .
+grasp:ElongatedGraspable   a owl:Class ; rdfs:subClassOf grasp:GraspableObject .
+grasp:ToolGraspable        a owl:Class ; rdfs:subClassOf grasp:GraspableObject .
+
+#################################################################
+# The 12 PODGE / YCB-V leaf classes (docker_compose/gdrnpp_yolov8.yml,
+# CONFIG=params_sasha.yaml, DATASET=ycbv)
+#################################################################
+grasp:MasterChefCan  a owl:Class ; rdfs:subClassOf grasp:CylindricalGraspable ; rdfs:label "002_master_chef_can" .
+grasp:CrackerBox     a owl:Class ; rdfs:subClassOf grasp:BoxGraspable         ; rdfs:label "003_cracker_box" .
+grasp:TomatoSoupCan  a owl:Class ; rdfs:subClassOf grasp:CylindricalGraspable ; rdfs:label "005_tomato_soup_can" .
+grasp:MustardBottle  a owl:Class ; rdfs:subClassOf grasp:CylindricalGraspable ; rdfs:label "006_mustard_bottle" .
+grasp:GelatinBox     a owl:Class ; rdfs:subClassOf grasp:BoxGraspable         ; rdfs:label "009_gelatin_box" .
+grasp:PottedMeatCan  a owl:Class ; rdfs:subClassOf grasp:BoxGraspable         ; rdfs:label "010_potted_meat_can" .
+grasp:Banana         a owl:Class ; rdfs:subClassOf grasp:ElongatedGraspable   ; rdfs:label "011_banana" .
+grasp:BleachCleanser a owl:Class ; rdfs:subClassOf grasp:HandleGraspable      ; rdfs:label "021_bleach_cleanser" .
+grasp:Bowl           a owl:Class ; rdfs:subClassOf grasp:Container           ; rdfs:label "024_bowl" .
+grasp:Mug            a owl:Class ; rdfs:subClassOf grasp:HandleGraspable     ; rdfs:label "025_mug" .
+grasp:PowerDrill     a owl:Class ; rdfs:subClassOf grasp:ToolGraspable       ; rdfs:label "035_power_drill" .
+grasp:FoamBrick      a owl:Class ; rdfs:subClassOf grasp:BoxGraspable        ; rdfs:label "061_foam_brick" .
+
+#################################################################
+# Grasp type individuals
+#################################################################
+grasp:SideCylindricalGrasp a grasp:GraspType .
+grasp:BoxPrecisionGrasp    a grasp:GraspType .
+grasp:HandleGrasp          a grasp:GraspType .
+grasp:RimGrasp             a grasp:GraspType .
+grasp:ElongatedSideGrasp   a grasp:GraspType .
+grasp:ToolHandleGrasp      a grasp:GraspType .
+
+#################################################################
+# Affordance individuals
+#################################################################
+grasp:Graspable   a grasp:Affordance .
+grasp:Pourable    a grasp:Affordance .
+grasp:Containable a grasp:Affordance .
+grasp:Openable    a grasp:Affordance .
+grasp:Rollable    a grasp:Affordance .
+
+#################################################################
+# Properties
+#################################################################
+grasp:recommendedGraspType a owl:ObjectProperty ; rdfs:domain grasp:GraspableObject ; rdfs:range grasp:GraspType .
+grasp:hasAffordance        a owl:ObjectProperty ; rdfs:domain grasp:GraspableObject ; rdfs:range grasp:Affordance .
+grasp:derivedGraspType     a owl:ObjectProperty ; rdfs:domain grasp:DetectedObject  ; rdfs:range grasp:GraspType .
+
+grasp:leafClass            a owl:DatatypeProperty ; rdfs:range xsd:string .
+grasp:hasConfidence        a owl:DatatypeProperty ; rdfs:range xsd:float .
+grasp:detectedAt           a owl:DatatypeProperty ; rdfs:range xsd:dateTime .
+grasp:hasConsistencyIssue  a owl:DatatypeProperty ; rdfs:range xsd:boolean .
+grasp:positionX a owl:DatatypeProperty ; rdfs:range xsd:float .
+grasp:positionY a owl:DatatypeProperty ; rdfs:range xsd:float .
+grasp:positionZ a owl:DatatypeProperty ; rdfs:range xsd:float .
+grasp:quatX a owl:DatatypeProperty ; rdfs:range xsd:float .
+grasp:quatY a owl:DatatypeProperty ; rdfs:range xsd:float .
+grasp:quatZ a owl:DatatypeProperty ; rdfs:range xsd:float .
+grasp:quatW a owl:DatatypeProperty ; rdfs:range xsd:float .
+
+grasp:attemptedOn         a owl:ObjectProperty ; rdfs:domain grasp:GraspAttempt ; rdfs:range grasp:DetectedObject .
+grasp:attemptedGraspType  a owl:ObjectProperty ; rdfs:domain grasp:GraspAttempt ; rdfs:range grasp:GraspType .
+grasp:attemptSucceeded    a owl:DatatypeProperty ; rdfs:range xsd:boolean .
+grasp:attemptedAt         a owl:DatatypeProperty ; rdfs:range xsd:dateTime .
+
+grasp:forCategory   a owl:ObjectProperty ; rdfs:domain grasp:GraspTypeStat ; rdfs:range grasp:GraspableObject .
+grasp:forGraspType   a owl:ObjectProperty ; rdfs:domain grasp:GraspTypeStat ; rdfs:range grasp:GraspType .
+grasp:successCount  a owl:DatatypeProperty ; rdfs:range xsd:integer .
+grasp:attemptCount  a owl:DatatypeProperty ; rdfs:range xsd:integer .
+
+#################################################################
+# Category-level background knowledge (the (K) side of (D, K))
+#################################################################
+grasp:CylindricalGraspable grasp:recommendedGraspType grasp:SideCylindricalGrasp ;
+                            grasp:hasAffordance grasp:Graspable, grasp:Rollable .
+grasp:BoxGraspable         grasp:recommendedGraspType grasp:BoxPrecisionGrasp ;
+                            grasp:hasAffordance grasp:Graspable .
+grasp:HandleGraspable      grasp:recommendedGraspType grasp:HandleGrasp ;
+                            grasp:hasAffordance grasp:Graspable, grasp:Pourable .
+grasp:Container            grasp:recommendedGraspType grasp:RimGrasp ;
+                            grasp:hasAffordance grasp:Graspable, grasp:Containable .
+grasp:ElongatedGraspable   grasp:recommendedGraspType grasp:ElongatedSideGrasp ;
+                            grasp:hasAffordance grasp:Graspable .
+grasp:ToolGraspable        grasp:recommendedGraspType grasp:ToolHandleGrasp ;
+                            grasp:hasAffordance grasp:Graspable .
+
+# a couple of finer-grained extra facts at the leaf-class level
+grasp:MustardBottle grasp:hasAffordance grasp:Openable, grasp:Pourable .
+grasp:Bowl          grasp:hasAffordance grasp:Openable .

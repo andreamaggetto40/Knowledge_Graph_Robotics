@@ -1,0 +1,3 @@
+numpy>=1.24
+owlrl>=6.0
+rdflib>=7.0

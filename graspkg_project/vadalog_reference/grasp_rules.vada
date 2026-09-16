@@ -1,0 +1,14 @@
+% GraspKG's rules (the secondary grasping extension), in Vadalog syntax.
+% Same caveat as spatial_rules.vada: untested, no engine access - a
+% faithful translation of the SPARQL CONSTRUCT rules in
+% graspkg/reasoning.py.
+
+@input("hasCategory").
+@input("recommendedGraspType").
+@input("hasAffordance").
+
+@output("derivedGraspType").
+derivedGraspType(Obj, GraspType) :- hasCategory(Obj, Cat), recommendedGraspType(Cat, GraspType).
+
+@output("derivedAffordance").
+derivedAffordance(Obj, Aff) :- hasCategory(Obj, Cat), hasAffordance(Cat, Aff).

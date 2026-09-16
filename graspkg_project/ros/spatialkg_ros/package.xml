@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>spatialkg_ros</name>
+  <version>0.1.0</version>
+  <description>
+    SpatialKG on ROS1: an explainable spatial knowledge graph for the
+    Toyota HSR - the "System of Record" sasha_gpt queries instead of
+    hallucinating a location. Wraps the pure-python `spatialkg` core
+    (pip-installed separately) in ROS nodes/services. Depends on
+    graspkg_ros for the secondary grasping hand-off
+    (spatialkg_to_graspkg_handoff.py).
+  </description>
+  <maintainer email="you@example.com">Andrea Maggetto</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>message_generation</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>rospy</build_depend>
+
+  <exec_depend>message_runtime</exec_depend>
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>graspkg_ros</exec_depend>
+
+  <!-- object_detector_msgs: same story as graspkg_ros/package.xml - only
+       a real exec_depend once podge_to_spatialkg_bridge.py's guessed
+       import is confirmed. -->
+
+  <!-- rdflib / owlrl are not standard rosdep keys: pip install them
+       (see ../../requirements.txt) into whatever Python environment this
+       package's nodes run under. -->
+</package>

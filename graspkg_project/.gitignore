@@ -1,0 +1,10 @@
+# Python / ROS build artifacts
+*.pyc
+__pycache__/
+*.npy
+*.bag
+*.log
+.vscode/
+build/
+devel/
+logs/

@@ -1,0 +1,20 @@
+# One PODGE (YOLOv8 + GDRNPP) detection to ingest into the knowledge graph.
+string object_name        # e.g. "025_mug" - must be one of the 12 PODGE classes
+float32 confidence        # YOLOv8 detection confidence, 0-1
+float32 position_x
+float32 position_y
+float32 position_z
+float32 quat_x
+float32 quat_y
+float32 quat_z
+float32 quat_w
+string frame_id
+---
+bool success
+string instance_uri
+string category
+string grasp_type          # empty if none could be derived
+bool consistency_ok
+string source               # "rule" | "embedding" | "none"
+float32 known_success_rate  # -1.0 if no history yet
+string message

@@ -1,0 +1,19 @@
+<launch>
+  <arg name="podge_service" default="/pose_estimator/get_poses"/>
+  <arg name="color_topic" default="/hsrb/head_rgbd_sensor/rgb/image_rect_color"/>
+  <arg name="cloud_topic" default="/hsrb/head_rgbd_sensor/depth_registered/rectified_points"/>
+  <arg name="run_haf_grasping_client" default="false"/>
+
+  <node pkg="graspkg_ros" type="graspkg_node.py" name="graspkg_node" output="screen"/>
+
+  <node pkg="graspkg_ros" type="podge_bridge_node.py" name="podge_bridge_node" output="screen">
+    <param name="podge_service" value="$(arg podge_service)"/>
+    <param name="color_topic" value="$(arg color_topic)"/>
+  </node>
+
+  <!-- off by default: only start once haf_grasping itself is running -->
+  <node pkg="graspkg_ros" type="haf_grasping_client.py" name="haf_grasping_client"
+        output="screen" if="$(arg run_haf_grasping_client)">
+    <param name="cloud_topic" value="$(arg cloud_topic)"/>
+  </node>
+</launch>

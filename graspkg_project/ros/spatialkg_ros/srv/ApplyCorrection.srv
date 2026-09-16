@@ -1,0 +1,7 @@
+string query_class
+string correct_room_id
+string corrected_by
+---
+bool success
+string instance_uri
+string message

@@ -1,0 +1,9 @@
+string query_class
+---
+bool success
+bool found
+string room
+bool is_stale
+string grasp_type
+bool consistency_ok
+string message

@@ -1,0 +1,6 @@
+string scene_file_path   # path to a 3DSSG-format JSON, e.g. spatialkg/sample_data/sample_scene.json
+---
+bool success
+int32 objects_loaded
+int32 relationships_loaded
+string message

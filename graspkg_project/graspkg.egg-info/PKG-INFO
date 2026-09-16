@@ -1,0 +1,9 @@
+Metadata-Version: 1.2
+Name: graspkg
+Version: 0.1.0
+Summary: Perception-grounded, affordance-aware knowledge graph for grasp reasoning on the Toyota HSR.
+Home-page: UNKNOWN
+License: UNKNOWN
+Description: UNKNOWN
+Platform: UNKNOWN
+Requires-Python: >=3.8

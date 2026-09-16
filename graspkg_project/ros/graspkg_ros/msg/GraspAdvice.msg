@@ -1,0 +1,12 @@
+Header header
+string instance_uri
+string category
+string grasp_type
+float32 detector_confidence
+bool consistency_ok
+string source
+float32 known_success_rate
+float32 position_x
+float32 position_y
+float32 position_z
+string frame_id

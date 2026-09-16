@@ -1,0 +1,61 @@
+{
+  "_comment": "Hand-authored stand-in for real 3RScan/3DSSG data (gated behind an ETH/TUM license, not reachable from this sandbox). Shaped after 3DSSG's actual relationships.json format - [subject_id, object_id, relationship_id, relationship_name] tuples, grouped by 'scan' - so scene_loader.py can load the real files unchanged once you have them; only the 'objects' block (per-object position) is this project's own simplification, since 3DSSG itself keys geometry off the point cloud/semseg files rather than storing it inline. Two scans of the SAME room ('reference_scene') at different times model exactly what 3RScan is for: re-localizing objects, some of which have moved.",
+  "rooms": [
+    {"id": "Kitchen", "adjacent_to": ["Corridor"]},
+    {"id": "Corridor", "adjacent_to": ["Kitchen", "LivingRoom"]},
+    {"id": "LivingRoom", "adjacent_to": ["Corridor"]}
+  ],
+  "relationship_vocabulary": {
+    "1": "standing on",
+    "2": "inside",
+    "3": "hanging on",
+    "4": "attached to",
+    "5": "part of"
+  },
+  "scans": [
+    {
+      "scan": "sample_kitchen_t0",
+      "reference_scene": "sample_kitchen",
+      "room": "Kitchen",
+      "scanned_at": "2026-09-10T09:00:00+00:00",
+      "objects": [
+        {"id": 1, "label": "table",         "class": "Table",         "position": [1.00, 0.50, 0.00]},
+        {"id": 2, "label": "cabinet",       "class": "Cabinet",       "position": [0.20, 1.80, 0.00]},
+        {"id": 3, "label": "shelf",         "class": "Shelf",         "position": [2.50, 0.10, 1.20]},
+        {"id": 4, "label": "mug",           "class": "Mug",           "position": [1.00, 0.50, 0.78]},
+        {"id": 5, "label": "bowl",          "class": "Bowl",          "position": [1.15, 0.55, 0.78]},
+        {"id": 6, "label": "mustard_bottle","class": "MustardBottle", "position": [0.20, 1.80, 0.50]},
+        {"id": 7, "label": "cracker_box",   "class": "CrackerBox",    "position": [2.50, 0.10, 1.30]}
+      ],
+      "relationships": [
+        [4, 1, 1, "standing on"],
+        [5, 1, 1, "standing on"],
+        [6, 2, 2, "inside"],
+        [7, 3, 1, "standing on"]
+      ]
+    },
+    {
+      "scan": "sample_kitchen_t1",
+      "reference_scene": "sample_kitchen",
+      "room": "Kitchen",
+      "scanned_at": "2026-09-10T15:00:00+00:00",
+      "objects": [
+        {"id": 1, "label": "table",         "class": "Table",         "position": [1.00, 0.50, 0.00]},
+        {"id": 2, "label": "cabinet",       "class": "Cabinet",       "position": [0.20, 1.80, 0.00]},
+        {"id": 3, "label": "shelf",         "class": "Shelf",         "position": [2.50, 0.10, 1.20]},
+        {"id": 4, "label": "mug",           "class": "Mug",           "position": [2.50, 0.10, 1.32]},
+        {"id": 5, "label": "bowl",          "class": "Bowl",          "position": [1.15, 0.55, 0.78]},
+        {"id": 6, "label": "mustard_bottle","class": "MustardBottle", "position": [0.20, 1.80, 0.50]},
+        {"id": 7, "label": "cracker_box",   "class": "CrackerBox",    "position": [2.50, 0.10, 1.30]},
+        {"id": 8, "label": "foam_brick",    "class": "FoamBrick",     "position": [1.30, 0.50, 0.77]}
+      ],
+      "relationships": [
+        [4, 3, 1, "standing on"],
+        [5, 1, 1, "standing on"],
+        [6, 2, 2, "inside"],
+        [7, 3, 1, "standing on"],
+        [8, 1, 1, "standing on"]
+      ]
+    }
+  ]
+}
