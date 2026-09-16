@@ -1,3 +1,4 @@
+# Python / ROS build artifacts
 *.pyc
 __pycache__/
 *.npy
