@@ -1,0 +1,10 @@
+6 class-level facts over 8 entities, 2 relations
+head            relation      true tail       rank
+Mug             supportedBy   Table              4
+Bowl            supportedBy   Table              4
+FoamBrick       supportedBy   Table              3
+CrackerBox      supportedBy   Shelf              4
+Mug             supportedBy   Shelf              8
+MustardBottle   insideOf      Cabinet            5
+
+mean rank: 4.67   hits@3: 17%   (n=6 held-out facts, 8 candidate entities)

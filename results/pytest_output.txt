@@ -1,0 +1,25 @@
+============================= test session starts ==============================
+platform linux -- Python 3.8.10, pytest-8.3.5, pluggy-1.5.0 -- /mnt/c/Users/ACER/Desktop/TU Wien/Summer Semester 2026/Knowledge Graph/Assignments/Knowledge_Graph_Robotics/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /mnt/c/Users/ACER/Desktop/TU Wien/Summer Semester 2026/Knowledge Graph/Assignments/Knowledge_Graph_Robotics
+collecting ... collected 17 items
+
+tests/test_pipeline.py::test_ontology_declares_all_twelve_classes PASSED [  5%]
+tests/test_pipeline.py::test_mug_inherits_handle_graspable PASSED        [ 11%]
+tests/test_pipeline.py::test_rule_derives_grasp_type_for_known_category PASSED [ 17%]
+tests/test_pipeline.py::test_consistency_check_flags_bad_pose PASSED     [ 23%]
+tests/test_pipeline.py::test_consistency_check_accepts_good_pose PASSED  [ 29%]
+tests/test_pipeline.py::test_feedback_updates_success_rate PASSED        [ 35%]
+tests/test_pipeline.py::test_simulated_stream_only_emits_configured_classes PASSED [ 41%]
+tests/test_pipeline.py::test_add_detection_rejects_unknown_object PASSED [ 47%]
+tests/test_spatial_pipeline.py::test_ontology_declares_all_classes PASSED [ 52%]
+tests/test_spatial_pipeline.py::test_scene_loads_expected_counts PASSED  [ 58%]
+tests/test_spatial_pipeline.py::test_room_propagation_is_recursive PASSED [ 64%]
+tests/test_spatial_pipeline.py::test_reachability_is_transitive PASSED   [ 70%]
+tests/test_spatial_pipeline.py::test_staleness_flags_superseded_observations PASSED [ 76%]
+tests/test_spatial_pipeline.py::test_locate_reports_the_most_recent_sighting PASSED [ 82%]
+tests/test_spatial_pipeline.py::test_locate_is_honest_about_unknown_objects PASSED [ 88%]
+tests/test_spatial_pipeline.py::test_correction_becomes_the_new_latest_sighting PASSED [ 94%]
+tests/test_spatial_pipeline.py::test_live_detection_can_be_added_without_a_scene_file PASSED [100%]
+
+============================== 17 passed in 5.61s ==============================
