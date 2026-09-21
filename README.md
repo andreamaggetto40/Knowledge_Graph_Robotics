@@ -32,35 +32,7 @@ alongside PODGE, `haf_grasping`, `grasping_pipeline`, and `hsrb_moveit`.
 
 ## Architecture
 
-```
-3DSSG-format scene (sample now; real 3RScan/3DSSG once licensed)
-PODGE live sightings (position only)              --->  knowledge acquisition (g)
-                                                                |
-                                                                v
-                                            spatial knowledge graph (TBox + ABox)
-                                             /                              \
-                     recursive rules (l, r):                    ComplEx embeddings (r):
-                 room propagation + reachability          predict occluded support (r)
-                                             \                              /
-                                                                v
-                                    query service (System of Record):
-                                  "where is X" - room, chain, staleness, source
-                                                                |
-                                          -----------------------------------------
-                                          |                                        |
-                                          v                                        v
-                              sasha_gpt calls this instead        secondary extension: GraspKG decides
-                              of guessing a location               grasp type + checks pose consistency
-                                                                                |
-                                                                                v
-                                                        grasping_pipeline's '/robot_llm' action (VERIFIED,
-                                                        already running on the robot) - detection, pose
-                                                        estimation, haf_grasping-backed grasp-point search,
-                                                        MoveIt execution, placement/handover: all internal
-                                                                                |
-                                                                                v
-                                                                  outcome updates the KG (LO8)
-```
+![SpatialKG system architecture](architecture.svg)
 
 `grasping_pipeline` (github.com/v4r-tuwien/grasping_pipeline) is the
 actual execution layer this project hands off to once an object has been
