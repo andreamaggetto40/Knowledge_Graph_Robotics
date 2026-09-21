@@ -27,7 +27,7 @@ Neither `graspkg_ros` nor `spatialkg_ros` know about each other; the one
 node that does is `spatialkg_ros/scripts/spatialkg_to_graspkg_handoff.py`,
 by design - the coupling lives in exactly one place.
 
-**ROS1 Noetic**, confirmed against the real workspace at `~/HSR/catkin_ws`,
+**ROS1 Noetic** is used in the real workspace at `~/HSR/catkin_ws`,
 alongside PODGE, `haf_grasping`, `grasping_pipeline`, and `hsrb_moveit`.
 
 ## Architecture
