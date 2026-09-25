@@ -133,7 +133,7 @@ source, not guessed - see `TESTING.md` Phase 7 for the bring-up checklist.
 | LO6 Scalable Reasoning | `reasoning.run_rules` (fixpoint over recursive CONSTRUCT rules) |
 | LO7 KG Creation | `scene_loader.py` (heterogeneous sources: 3DSSG-format scenes + live PODGE sightings + corrections) |
 | LO8 KG Evolution | `spatialkg/evolution.py` (corrections), `reasoning.check_staleness` |
-| LO9 Real-World Applications | the whole thing, on a real HSR - SpatialKG's core is verified offline (tests/), PODGE's perception interface and grasp execution (via grasping_pipeline's real, already-running `/robot_llm` action) are both confirmed from source rather than guessed; sasha_gpt's own wiring into `locate_object` is the one remaining open unknown (see TESTING.md Phase 7) |
+| LO9 Real-World Applications | the whole project, on a real HSR - SpatialKG's core is verified offline (tests/), PODGE's perception interface and grasp execution (via grasping_pipeline's real, already-running `/robot_llm` action) are both confirmed from source rather than guessed; sasha_gpt's own wiring into `locate_object` is the one remaining open unknown (see TESTING.md Phase 7) |
 | LO11 Services | `query_service.py` + the ROS service layer sasha_gpt queries |
 | LO12 Connections (AI/ML/DS) | perception (ML) -> KG (symbolic AI) -> evaluation scripts (DS-style metrics) |
 
