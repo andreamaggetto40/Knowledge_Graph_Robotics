@@ -259,7 +259,7 @@ The only remaining open unknown is sasha_gpt's own wiring into
   pattern - store plain `Literal(value)` (no datatype) for anything you
   intend to filter on directly in a query, or use
   `FILTER(str(?x) = "...")` instead.
-- **One open unknown, not a bug:** if sasha_gpt-related pieces don't work,
+- **worth noting** if sasha_gpt-related pieces don't work,
   that's expected until its wiring into `locate_object` is confirmed -
   re-check Phase 6 still passes to confirm the core itself isn't at fault.
   PODGE (Phase 7) and grasp execution (Phase 8) are both confirmed, real
