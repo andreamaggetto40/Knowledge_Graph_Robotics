@@ -1,10 +1,8 @@
 # Testing guide
 
-Test in this order. Each phase only needs what the previous phase already
-proved works, so a failure always points at something new rather than
+Each phase only needs what the previous phase already proved works.
 something you haven't checked yet. Phases 1-4 need nothing but Python -
-do those first, today, regardless of robot access. Phases 5+ need your
-real `~/HSR/catkin_ws`.
+do those first, today, regardless of robot access. Phases 5+ need real `~/HSR/catkin_ws`.
 
 ## Phase 1 - environment
 
@@ -26,19 +24,13 @@ pytest tests/ -v
 ```
 
 Expect **17 passed** (8 in `test_pipeline.py` for GraspKG, 9 in
-`test_spatial_pipeline.py` for SpatialKG). This is the fastest possible
-signal something's wrong, so re-run it after *any* change you make,
-including ones that look ROS-only - a lot of the actual logic lives in the
-plain-Python core, not the node scripts.
-
-If something fails here, don't proceed to the ROS phases - fix it first.
-Run a single failing test in isolation for a clearer traceback:
+`test_spatial_pipeline.py` for SpatialKG).
 
 ```bash
 pytest tests/test_spatial_pipeline.py::test_room_propagation_is_recursive -v
 ```
 
-## Phase 3 - offline demos (read the output, don't just check the exit code)
+## Phase 3 - offline demos
 
 ```bash
 python3 scripts/run_spatial_demo.py
@@ -48,19 +40,17 @@ Walk through what each section should show:
 - `[acquisition]` - loaded 2 scans, 15 object observations, 9 relationships, 7 same-instance links.
 - `[reasoning]` - derived 6 new triples (room propagated through support chains), 7 entities flagged stale (the earlier of the two scans, correctly superseded by the later one).
 - `[reachability]` - `Kitchen` can reach `Corridor` and `LivingRoom` (2 hops, via the recursive rule).
-- `[query service]` - `Mug` should report it moved to the `Shelf` (that's the scripted "someone moved it between scans" scenario); `PowerDrill` should say **no observation and no confident prediction** - this is the correct, desired answer, not a bug. If `PowerDrill` (or anything else absent from the sample scene) ever returns a confident-sounding answer instead of admitting it doesn't know, that's a real regression in the anti-hallucination behavior - worth an immediate look.
+- `[query service]` - `Mug` should report it moved to the `Shelf` (that's the scripted "someone moved it between scans" scenario); For testing, `PowerDrill` should say **no observation and no confident prediction**.
 - `[evolution]` - after the scripted correction, `MustardBottle` should report `LivingRoom`, with a history note mentioning it was previously seen in `Kitchen`.
 
 ```bash
 python3 scripts/run_demo.py
 ```
 
-Same idea for GraspKG: check that every printed grasp recommendation has a
-`source` of `rule` (all 12 classes have a category-level rule, so
-`embedding` shouldn't appear here - if it does, something in the ontology
-broke), and that inconsistent poses get flagged with a `WARNING`.
+Same idea for GraspKG: every printed grasp recommendation has a
+`source` of `rule` (all 12 classes have a category-level rule), and that inconsistent poses get flagged with a `WARNING`.
 
-## Phase 4 - evaluation scripts (the numbers for your report)
+## Phase 4 - evaluation scripts
 
 ```bash
 python3 scripts/evaluate_spatial_rules.py     # rule coverage + reachability closure size
@@ -69,31 +59,25 @@ python3 scripts/evaluate_rules.py             # same idea, GraspKG
 python3 scripts/evaluate_embeddings.py
 ```
 
-Two things worth knowing going in, so you don't mistake correct-but-modest
-results for bugs:
+To consider:
 - The spatial ComplEx numbers (mean rank ~4.7 of 8 candidates on the
-  sample scene) are unimpressive **because the sample scene is tiny** -
-  6 training facts is not enough to learn much from. That's an honest,
-  reportable finding (embeddings need volume; rules don't), not something
-  to "fix" - it should improve substantially once you load real
+  sample scene) are tiny **because the sample scene is tiny** -
+  6 training facts is not enough to learn much from.
+  It should improve substantially once you load real
   3RScan/3DSSG data with `scene_loader.load_scene_file` instead of the
   sample. These numbers are now deterministic run-to-run for a fixed seed
   (an earlier version of `fit()` shuffled training order with Python's
-  unseeded global `random` module instead of the seeded numpy generator -
-  fixed, so a given seed now reproduces the same numbers every time).
+  unseeded global `random` module instead of the seeded numpy generator).
 - GraspKG's `recommendedGraspType` relation is a clean one-to-one mapping
-  in that ontology, so its own leave-one-out numbers are close to random
+  in that ontology, its own leave-one-out numbers are close to random
   by design (see the docstring in `evaluate_embeddings.py`) - only
-  `hasAffordance` (shared across categories) should show real lift.
+  `hasAffordance` (shared across categories) shows lift.
 
-**Try this yourself:** edit `spatialkg/sample_data/sample_scene.json` to
+**To try something different** edit `spatialkg/sample_data/sample_scene.json` to
 add a third scan, a new room, or a new object placement, then re-run
-`run_spatial_demo.py` and the two spatial scripts. If the counts/behaviour
-change the way you'd expect from your edit, the pipeline is doing what it
-says. This is the cheapest way to build confidence in the logic before
-touching ROS at all.
+`run_spatial_demo.py` and the two spatial scripts. This is the cheapest way to build confidence in the logic before touching ROS at all.
 
-## Phase 5 - catkin build (still no robot needed)
+## Phase 5 - catkin build (ON ROBOT)
 
 ```bash
 cp -r ros/graspkg_ros ros/spatialkg_ros ~/HSR/catkin_ws/src/
@@ -110,22 +94,20 @@ catkin_make --pkg graspkg_ros spatialkg_ros
 ```
 
 Likely failure modes and what they mean:
-- **`haf_grasping` not found** - `graspkg_ros` depends on it at build time (for its action/message types). It needs to already be built in the same workspace, which your `src/` listing suggests it is - if the build still can't find it, check it's actually been `catkin_make`'d at least once itself.
+- **`haf_grasping` not found** - `graspkg_ros` depends on it at build time (for its action/message types). It needs to already be built in the same workspace, which your `src/` listing suggests it is - if the build still can't find it, check it's actually been `catkin_make`'d at least once itself. 
 - **`robokudo_msgs` not found** - both packages now declare it as a build dependency (it defines `GenericImgProcAnnotatorAction`, PODGE's confirmed interface - see Phase 7). It's the same package `grasping_pipeline` itself depends on for its own `object_detector.py`/`pose_estimator.py`, so it should already be built in this workspace if `grasping_pipeline` is; if not, build it from `gitlab.informatik.uni-bremen.de/robokudo/robokudo_msgs` first.
 - **Python import errors when a node actually runs** (not at build time) - almost always means `pip install -e .` (Phase 1) wasn't done in the Python environment your ROS nodes actually run under. `roscore`/`rosrun` use whatever `python3` is on `PATH` at launch time, which may not be your venv - either activate the venv before `roslaunch`, or `pip install -e .` outside the venv too.
 
-## Phase 6 - ROS smoke test, no PODGE, no robot
+## Phase 6 - ROS smoke test
 
-This is the most important phase for trusting the rest: it proves the
-services, message types, and node wiring are structurally correct,
-completely independent of the two things I couldn't verify (PODGE's real
-interface, sasha_gpt's interface).
+Phase for trusting the rest: it proves the
+services, message types, and node wiring are structurally correct.
 
 ```bash
 roslaunch spatialkg_ros spatialkg.launch
 ```
 
-In another terminal, once you see `spatialkg_node: ready (... triples loaded)`:
+In another terminal, you see `spatialkg_node: ready (... triples loaded)`:
 
 ```bash
 rosservice list | grep -E "spatialkg|graspkg"
@@ -156,13 +138,11 @@ rosservice call /spatialkg_to_graspkg_handoff/find_and_grasp "query_class: 'Mug'
 ```
 
 If every call in this phase behaves as expected, the entire KG logic and
-ROS plumbing is verified end to end - anything that goes wrong from here
-on is isolated to the two integration points below, not to this core.
+ROS architecture is verified end to end - anything that goes wrong from here
+on is isolated to the two integration points as below.
 
 ## Phase 7 - real PODGE
-
-This phase no longer has an open TODO either - PODGE's interface is
-confirmed (not guessed) directly from `grasping_pipeline`'s own source
+PODGE's interface is confirmed retrieved directly from `grasping_pipeline`'s own source
 (`src/object_detector.py`, `src/pose_estimator.py`, both of which call the
 same PODGE this repo does): **two** actionlib
 `robokudo_msgs/GenericImgProcAnnotatorAction` servers, an object detector
@@ -172,8 +152,7 @@ then a pose estimator, not one combined service. `_call_podge()` in both
 this confirmed interface (see either file's docstring for the full detail,
 including the recommended `dataset: 'ycb_bop'` config value).
 
-1. Bring up PODGE itself (in its own terminal, exactly the way you already
-   do it):
+1. Bring up PODGE itself (in its own terminal):
    ```bash
    xhost local:docker
    DATASET=ycbv CONFIG=params_sasha.yaml docker compose -f docker_compose/gdrnpp_yolov8.yml up
@@ -198,14 +177,13 @@ including the recommended `dataset: 'ycb_bop'` config value).
    The one thing still worth checking empirically the first time you run
    this: whether `detection.class_names` comes back as human-readable
    names (e.g. `'025_mug'`) or generic `obj_NNNNNN` IDs -
-   `object_mapping.yaml` in `grasping_pipeline` has no `ycb_bop` section,
-   which suggests the former, but it's only confirmed once you print it.
+   `object_mapping.yaml` in `grasping_pipeline` has no `ycb_bop` section.
    If it's the latter, add a `ycb_bop` mapping table and translate in
    `_call_podge()` before forwarding into `graspkg_node/add_detection`.
 
 ## Phase 8 - grasping_pipeline (the real execution layer)
 
-This phase no longer has an open TODO - grasping_pipeline's own
+TODO: to implement on the robot - grasping_pipeline's own
 `/robot_llm` action (confirmed from its source, see
 `spatialkg_to_graspkg_handoff.py`'s docstring) is what
 `spatialkg_to_graspkg_handoff.py` calls once `~trigger_grasp:=true`, and
@@ -243,7 +221,7 @@ per your confirmation it's already working on the real robot.
    VERIFIED" note for why this package might not be where the rest of
    grasping_pipeline is.
 
-Only once this phase passes on its own does the previous `haf_grasping_client.py`-based path (Phase 7's sibling, `graspkg_ros/haf_grasping_client.py`) become purely optional - it's kept only for driving `haf_grasping` directly, bypassing grasping_pipeline, e.g. to debug grasp-point search in isolation. Nothing in the main path depends on it anymore.
+Only once this phase passes on its own does the previous `haf_grasping_client.py`-based path (Phase 7's sibling, `graspkg_ros/haf_grasping_client.py`) become purely optional - it's kept only for driving `haf_grasping` directly, bypassing grasping_pipeline, e.g. to debug grasp-point search in isolation. Nothing in the main path depends on it.
 
 ## Phase 9 - full loop
 
@@ -275,7 +253,7 @@ The only remaining open unknown is sasha_gpt's own wiring into
 - **Inspect the graph directly** rather than guessing why a query returned
   nothing: `store.serialize("/tmp/debug.ttl")` from a Python shell, then
   read the Turtle file, or run ad-hoc SPARQL via `store.select(...)`.
-- **A gotcha I hit myself, in case you extend the ontology and hit it too:**
+- **Worth noting:**
   this rdflib version doesn't match a string literal stored with an
   explicit `datatype=XSD.string` against a bare `"..."` in a SPARQL triple
   pattern - store plain `Literal(value)` (no datatype) for anything you
@@ -286,7 +264,7 @@ The only remaining open unknown is sasha_gpt's own wiring into
   re-check Phase 6 still passes to confirm the core itself isn't at fault.
   PODGE (Phase 7) and grasp execution (Phase 8) are both confirmed, real
   interfaces now, not guesses.
-- **Another gotcha already fixed, in case you add your own randomized
+- **Another point already fixed, in case you add your own randomized
   training/sampling code:** always draw randomness from the seeded numpy
   generator (`self._rng`) inside a class that takes a `seed` parameter,
   never from Python's global `random` module - the latter isn't

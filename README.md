@@ -45,9 +45,9 @@ you'd need to confirm on your own workspace.
 
 ## Why this dataset/engine/embedding choice, specifically
 
-- **3RScan/3DSSG, not a live-only pipeline.** 3RScan's actual purpose is
+- **3RScan/3DSSG :** 3RScan's actual purpose is
   re-localizing objects across rescans of the *same* room over time - which
-  is exactly the honesty problem in the Motivation ("where is the medicine"
+  is exactly the problem in the Motivation ("where is the medicine"
   should come with "as of when, and how sure"). The ontology and
   `scene_loader.py` are built around 3DSSG's real relationship vocabulary
   (`standing on`, `inside`, `hanging on`, `attached to`) and its real
@@ -58,15 +58,14 @@ you'd need to confirm on your own workspace.
   behaviour (an object moving between scans) is actually exercised - point
   `scene_loader.load_scene_file` at the real files once you have them;
   nothing else changes.
-- **Recursive rules, not a flat rule set.** `spatialkg/reasoning.py`
+- **Recursive rules:** `spatialkg/reasoning.py`
   materialises RDFS subclass entailment, then two rules expressed as
   SPARQL property paths with `+` (one-or-more) - the native way to get
   literally recursive closure for room propagation through arbitrarily
   long support chains, and for room-to-room reachability. `vadalog_reference/`
   has the same two rules hand-translated into Vadalog's own Datalog+/-
-  syntax, since real Vadalog access is a commercial product (Prometheux
-  Limited) gated behind contacting them for backend access - not something
-  installable here, and not something I have credentials for.
+  syntax; since real Vadalog access is a commercial product (Prometheux
+  Limited) gated behind contacting them for backend access, not something installable here.
 - **ComplEx, not TransE.** `supportedBy`/`insideOf` are asymmetric (a table
   is not supportedBy a plate); ComplEx's complex-valued bilinear score
   handles that naturally where TransE's translation distance does not.
@@ -80,7 +79,7 @@ you'd need to confirm on your own workspace.
   ("observation"/"embedding"/"none"), staleness, and a support chain, so
   "I don't know" and "this might be stale" are first-class answers, not
   failures. That's the whole point of the KG existing at all.
-- **grasping_pipeline for execution, not a hand-rolled MoveIt hand-off.**
+- **grasping_pipeline for execution:**
   Once GraspKG has decided a grasp type and confirmed pose consistency,
   `spatialkg_to_graspkg_handoff.py` (with `~trigger_grasp:=true`) calls
   grasping_pipeline's own `/robot_llm` actionlib server directly -
@@ -105,7 +104,7 @@ pip install -r requirements.txt
 pip install -e .
 
 pytest tests/ -v                            # 17 tests across both KGs
-python3 scripts/run_spatial_demo.py         # primary: spatial KG end to end
+python3 scripts/run_spatial_demo.py         # spatial KG end to end
 python3 scripts/evaluate_spatial_rules.py   # recursive-rule coverage + reachability closure size
 python3 scripts/evaluate_spatial_embeddings.py  # leave-one-out link prediction (ComplEx)
 
