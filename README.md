@@ -30,6 +30,14 @@ by design - the coupling lives in exactly one place.
 **ROS1 Noetic** is used in the real workspace at `~/HSR/catkin_ws`,
 alongside PODGE, `haf_grasping`, `grasping_pipeline`, and `hsrb_moveit`.
 
+## Data
+
+- `spatialkg/ontology/spatial_ontology.ttl` — SpatialKG's schema (classes, relations)
+- `graspkg/ontology/grasp_ontology.ttl` — GraspKG's schema
+- `spatialkg/sample_data/sample_scene.json` — the scene data itself; a hand-authored
+  stand-in for the license-gated 3RScan dataset, built to its exact format (see §3.1
+  and §5 of the portfolio)
+
 ## Architecture
 
 ![SpatialKG system architecture](architecture.svg)
