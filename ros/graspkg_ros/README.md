@@ -36,12 +36,12 @@ internally (its `grasping_pipeline_servers.launch` includes
 own `/robot_llm` actionlib action - not a hand-rolled MoveIt call - that
 now owns the actual pick/place/handover execution end to end. See
 `spatialkg_ros/scripts/spatialkg_to_graspkg_handoff.py`'s docstring for
-that hand-off, which is confirmed rather than a guess or a `TODO` now.
+that hand-off.
 `haf_grasping_client.py` in this package is kept only as an optional,
 independent way to drive `haf_grasping` directly (e.g. for debugging
 grasp-point search in isolation) - nothing in the main path depends on it.
 
-## 1. What's verified vs. what's still a guess
+## 1. Verified vs. Guess
 
 **Verified (safe to rely on):**
 - ROS1 Noetic, real catkin workspace at `~/HSR/catkin_ws`.
@@ -51,8 +51,7 @@ grasp-point search in isolation) - nothing in the main path depends on it.
   is built against these exactly, field for field.
 - `podge_bridge_node.py`'s `_call_podge()`: the two-actionlib-server
   `robokudo_msgs/GenericImgProcAnnotatorAction` interface described above,
-  confirmed from `grasping_pipeline`'s own source rather than from
-  `rosservice`/`rostopic` introspection. Default topics
+  confirmed from `grasping_pipeline`. Default topics
   (`/object_detector/yolov8`, `/pose_estimator/gdrnet`) match
   `grasping_pipeline/config/config.yaml`'s own defaults, and are
   overridable via `~object_detector_topic`/`~pose_estimator_topic` params
@@ -63,8 +62,7 @@ grasp-point search in isolation) - nothing in the main path depends on it.
   `spatialkg_to_graspkg_handoff.py` when `~trigger_grasp:=true`, with the
   result fed back into `graspkg_node/report_outcome`.
 
-**Still worth confirming empirically (not wrong, just unverified from
-source alone):**
+**Still worth confirming empirically:**
 - Whether PODGE's `class_names` come back as human-readable names (e.g.
   `'025_mug'`) or generic `obj_NNNNNN` IDs when running with
   `dataset: 'ycb_bop'` - `grasping_pipeline/config/object_mapping.yaml`
@@ -82,7 +80,7 @@ source alone):**
   (see above), so this only matters if you use it directly.
 - The `robot_llm` ROS package itself (which defines `RobotLLMAction`) -
   it's not in `grasping_pipeline`'s own public dependency list, so confirm
-  `rospack find robot_llm` resolves on your workspace before relying on
+  `rospack find robot_llm` resolves on workspace before relying on
   the `~trigger_grasp:=true` path.
 
 ## 2. Build
@@ -101,8 +99,7 @@ catkin_make          # or: catkin build
 source devel/setup.bash
 ```
 
-`haf_grasping` needs to already be built in the same workspace (it is,
-per your `src/` listing) since `graspkg_ros` depends on its action/message
+`haf_grasping` needs to already be built in the same workspace, since `graspkg_ros` depends on its action/message
 package at build time.
 
 ## 3. Run

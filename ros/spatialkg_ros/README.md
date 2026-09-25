@@ -7,26 +7,21 @@ grasping extension, linked in via `spatialkg_to_graspkg_handoff.py`.
 
 ## What's verified vs. still a guess
 
-Same honesty split as `graspkg_ros/README.md`, because the underlying
-uncertainty is identical (I still don't have PODGE's real service
-definition):
+Same split as `graspkg_ros/README.md`, because the underlying
+uncertainty is identical:
 
 **Verified:** the pure-python `spatialkg` core (ontology, recursive rules,
 ComplEx embeddings, query service) - fully tested, see `../../tests/` and
 `../../scripts/run_spatial_demo.py`.
 
-**Also verified, newly:** `spatialkg_to_graspkg_handoff.py`'s
+**Also verified:** `spatialkg_to_graspkg_handoff.py`'s
 `~trigger_grasp:=true` path, which calls grasping_pipeline's `/robot_llm`
 action to actually execute a grasp. Confirmed by reading
 grasping_pipeline's own source (github.com/v4r-tuwien/grasping_pipeline -
 `src/statemachine_llm.py`, `launch/grasping_pipeline_statemachine.launch`),
 not guessed - see that script's docstring for exactly what was checked.
-Per your confirmation, grasping_pipeline is already running correctly on
-the real robot, so this is the one integration point in this whole repo
-that's verified *and* already working end to end, not just verified in
-isolation.
 
-**Still a guess:**
+**To inspect:**
 - `podge_to_spatialkg_bridge.py`'s `_call_podge()` - identical guessed
   interface to `graspkg_ros/podge_bridge_node.py`'s, duplicated because the
   two catkin packages are independent. Fix both copies once confirmed (see
@@ -111,11 +106,8 @@ rosservice call /spatialkg_to_graspkg_handoff/find_and_grasp "query_class: 'Mug'
 I don't have sasha_gpt's actual interface, so two starting points, pick
 whichever fits once you look:
 
-1. **If sasha_gpt is a ROS node**, it can call `/spatialkg_node/locate_object`
+it can call `/spatialkg_node/locate_object`
    directly like any other ROS client - no translation needed.
-2. **If sasha_gpt does LLM function-calling** (OpenAI/Anthropic-style tool
-   use), register `locate_object` as a tool with this schema and have the
-   handler call the ROS service underneath:
 
    ```json
    {
